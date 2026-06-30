@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGA Premium - Sistema de Gestión de Admisión</title>
+    <style>
+        :root {
+            --azul-premium: #0076ce;
+            --azul-dark: #004b87;
+            --azul-deep: #0f172a;
+            --rojo-premium: #e52320;
+            --rojo-dark: #b81715;
+            --verde-exito: #10b981;
+            --bg-sistema: #f1f5f9;
+            --blanco: #ffffff;
+            --texto-principal: #1e293b;
+            --texto-mutado: #64748b;
+            --gris-borde: #cbd5e1;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-sistema); color: var(--texto-principal); overflow-x: hidden; }
+
+        /* ========================================== */
+        /* PANTALLA DE LOGIN                          */
+        /* ========================================== */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--azul-dark) 0%, var(--azul-deep) 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 10000;
+            transition: opacity 0.3s ease;
+        }
+        .login-card {
+            background: var(--blanco); padding: 40px; border-radius: 16px;
+            width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center; border-top: 5px solid var(--rojo-premium);
+        }
+        .login-logo { height: 75px; margin-bottom: 20px; }
+        .login-card h2 { color: var(--azul-dark); font-size: 1.6rem; margin-bottom: 5px; font-weight: 800; }
+        .login-card p { color: var(--texto-mutado); font-size: 0.9rem; margin-bottom: 25px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--azul-deep); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid var(--gris-borde); border-radius: 8px; font-size: 0.95rem; outline: none; transition: border 0.2s; }
+        .form-control:focus { border-color: var(--azul-premium); box-shadow: 0 0 0 3px rgba(0,118,206,0.15); }
+        .btn-login { width: 100%; background: var(--rojo-premium); color: var(--blanco); padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-login:hover { background: var(--rojo-dark); }
+        .login-error { color: var(--rojo-premium); font-size: 0.85rem; margin-top: 10px; display: none; font-weight: 600; }
+
+        /* ========================================== */
+        /* CABECERA REAL DEL SISTEMA                  */
+        /* ========================================== */
+        #main-system-header { display: none; background: var(--azul-dark); color: var(--blanco); padding: 0 4%; height: 70px; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 999; }
+        .sys-brand { display: flex; align-items: center; gap: 12px; }
+        .sys-brand img { height: 45px; }
+        .sys-title h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+        .sys-title p { font-size: 0.75rem; color: rgba(255,255,255,0.7); }
+        
+        .sys-user-nav { display: flex; align-items: center; gap: 20px; }
+        .view-toggle-container { background: rgba(255,255,255,0.1); padding: 4px; border-radius: 8px; display: flex; gap: 4px; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-toggle-view { background: transparent; border: none; color: rgba(255,255,255,0.8); padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-toggle-view.active { background: var(--rojo-premium); color: var(--blanco); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        
+        .user-profile-badge { display: flex; align-items: center; gap: 10px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--blanco); color: var(--azul-dark); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 0.9rem; border: 2px solid var(--rojo-premium); }
+        .user-info-text { font-size: 0.8rem; text-align: left; }
+        .btn-logout { background: transparent; border: none; color: rgba(255,255,255,0.6); font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding: 0; }
+        .btn-logout:hover { color: var(--rojo-premium); }
+
+        /* VISTAS CONTENEDORAS */
+        .workspace { display: none; padding: 40px 4%; max-width: 1400px; margin: 0 auto; }
+        .active-workspace { display: block; animation: wsFade 0.3s ease-out; }
+        @keyframes wsFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CARDS Y COMPONENTES */
+        .dashboard-card { background: var(--blanco); border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 24px; margin-bottom: 30px; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #e0f2fe; color: #0369a1; }
+
+        /* ========================================== */
+        /* VISTA 1: DASHBOARD DEL DIRECTOR            */
+        /* ========================================== */
+        .db-title-block { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .db-title-block h2 { font-size: 1.6rem; color: var(--azul-deep); font-weight: 800; }
+        .btn-primary { background: var(--azul-premium); color: var(--blanco); padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,118,206,0.2); }
+        .btn-primary:hover { background: var(--azul-dark); }
+        
+        /* Rejilla de Indicadores (KPIs) */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-box { background: var(--blanco); border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
+        .kpi-box::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--azul-premium); }
+        .kpi-box.kpi-alt::before { background: var(--rojo-premium); }
+        .kpi-data h4 { font-size: 0.8rem; color: var(--texto-mutado); text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-data .value { font-size: 2rem; font-weight: 800; color: var(--azul-deep); margin: 2px 0; }
+        .kpi-data .subtext { font-size: 0.75rem; color: var(--verde-exito); font-weight: 600; }
+        .kpi-icon-wrapper { width: 48px; height: 48px; border-radius: 50%; background: #f0f7ff; display: flex; justify-content: center; align-items: center; color: var(--azul-premium); font-size: 1.2rem; font-weight: bold; }
+        .kpi-box.kpi-alt .kpi-icon-wrapper { background: #fff5f5; color: var(--rojo-premium); }
+
+        /* Tabla del Dashboard */
+        .table-header-tool { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0; margin-bottom: 15px; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        .main-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        .main-table th { background: #f8fafc; padding: 14px; color: var(--texto-mutado); font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+        .main-table td { padding: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .main-table tr:hover { background-color: #f8fafc; }
+        .btn-table { background: #f1f5f9; border: 1px solid var(--gris-borde); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--azul-deep); transition: all 0.2s; }
+        .btn-table:hover { background: var(--azul-premium); color: white; border-color: var(--azul-premium); }
+
+        /* ========================================== */
+        /* VISTA 2: TRACKING PADRE DE FAMILIA         */
+        /* ========================================== */
+        .parent-profile-segment { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid #f1f5f9; margin-bottom: 25px; }
+        .parent-profile-segment h2 { font-size: 1.4rem; color: var(--azul-dark); font-weight: 800; }
+        
+        /* Barra de progreso de avance */
+        .progress-block { margin: 25px 0; }
+        .progress-meta { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 8px; font-size: 1rem; }
+        .progress-track { background: #e2e8f0; height: 14px; border-radius: 20px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(to right, var(--azul-premium), var(--rojo-premium)); height: 100%; width: 71%; border-radius: 20px; position: relative; }
+        
+        /* Línea de tiempo vertical */
+        .timeline-container { position: relative; padding-left: 35px; margin-top: 30px; }
+        .timeline-container::before { content: ''; position: absolute; left: 9px; top: 8px; bottom: 8px; width: 3px; background: #e2e8f0; }
+        .step-node { position: relative; margin-bottom: 30px; }
+        .step-indicator { position: absolute; left: -35px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--blanco); border: 4px solid var(--texto-mutated); z-index: 2; }
+        
+        .step-node.done .step-indicator { border-color: var(--verde-exito); background: var(--verde-exito); }
+        .step-node.current .step-indicator { border-color: var(--azul-premium); background: var(--blanco); transform: scale(1.2); box-shadow: 0 0 0 4px rgba(0,118,206,0.15); }
+        .step-node.upcoming .step-indicator { border-color: #cbd5e1; background: #e2e8f0; }
+
+        .step-body { background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .step-node.current .step-body { background: #f0f7ff; border-left: 4px solid var(--azul-premium); }
+        .step-info h5 { font-size: 1rem; color: var(--azul-deep); font-weight: 700; }
+        .step-info p { font-size: 0.85rem; color: var(--texto-mutado); margin-top: 2px; }
+        .step-stamp { font-size: 0.8rem; font-weight: 600; color: var(--texto-principal); background: rgba(0,0,0,0.04); padding: 4px 10px; border-radius: 4px; }
+
+        /* ========================================== */
+        /* MODALES (DISEÑO UNIVERSAL SENIOR)          */
+        /* ========================================== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+        .modal-window { background: var(--blanco); border-radius: 14px; width: 100%; max-width: 600px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border-top: 6px solid var(--azul-premium); animation: modalScale 0.25s ease-out; display: flex; flex-direction: column; max-height: 90vh; }
+        @keyframes modalScale { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 1.25rem; color: var(--azul-deep); font-weight: 800; }
+        .btn-close-modal { background: none; border: none; font-size: 1.5rem; color: var(--texto-mutado); cursor: pointer; }
+        .btn-close-modal:hover { color: var(--rojo-premium); }
+        
+        .modal-body { padding: 24px; overflow-y: auto; }
+        .modal-footer { padding: 15px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1xl 1xl; gap: 15px; }
+        @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+        /* Estilos de información interna del modal gestionar */
+        .modal-profile-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        .modal-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
+        .modal-row span:first-child { color: var(--texto-mutado); font-weight: 600; }
+        .modal-row span:last-child { color: var(--azul-deep); font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. CAPA DE AUTENTICACIÓN (LOGIN) -->
+    <div id="login-screen">
+        <div class="login-card">
+            <!-- Representación del escudo mediante tipografía e isotipo simulado -->
+            <div style="font-size: 3rem; margin-bottom:10px;">🛡️</div>
+            <h2>PREMIUM COLLEGE</h2>
+            <p>Sistema de Gestión del Proceso de Admisión</p>
+            
+            <div class="form-group">
+                <label>Usuario del Sistema</label>
+                <input type="text" id="txt-user" class="form-control" placeholder="Ej: admin" value="admin">
+            </div>
+            <div class="form-group">
+                <label>Contraseña institucional</label>
+                <input type="password" id="txt-pass" class="form-control" placeholder="••••••••" value="admin">
+            </div>
+            <button class="btn-login" onclick="evaluarLogin()">Ingresar al Sistema</button>
+            <div id="login-msg-error" class="login-error">Credenciales incorrectas. Pruebe con admin / admin.</div>
+        </div>
+    </div>
+
+    <!-- 2. CONTROL DE CABECERA PRINCIPAL (SISTEMA REAL) -->
+    <header id="main-system-header">
+        <div class="sys-brand">
+            <div style="font-size: 1.8rem;">🛡️</div>
+            <div class="sys-title">
+                <h1>Premium Academic SIS</h1>
+                <p>Módulo de Admisiones e Incorporaciones 2026</p>
+            </div>
+        </div>
+
+        <!-- Módulo Switcher integrado en la barra de herramientas del sistema -->
+        <div class="view-toggle-container">
+            <button id="toggle-admin" class="btn-toggle-view active" onclick="cambiarEntorno('director')">Módulo Director</button>
+            <button id="toggle-padre" class="btn-toggle-view" onclick="cambiarEntorno('padre')">Simular Vista Padre</button>
+        </div>
+
+        <div class="sys-user-nav">
+            <div class="user-profile-badge">
+                <div class="user-avatar">A</div>
+                <div class="user-info-text">
+                    <strong style="display:block; font-size:0.85rem;">Mg. Director General</strong>
+                    <button class="btn-logout" onclick="cerrarSesionSga()">Cerrar Módulo</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- ================================================================= -->
+    <!-- WORKSPACE: ENTORNO DEL DIRECTOR (DASHBOARD AVANZADO)             -->
+    <!-- ================================================================= -->
+    <main id="ws-director" class="workspace active-workspace">
+        
+        <div class="db-title-block">
+            <div>
+                <h2>Dashboard Ejecutivo de Admisiones</h2>
+                <p style="color: var(--texto-mutado); font-size: 0.9rem;">Consolidado analítico de postulaciones en tiempo real.</p>
+            </div>
+            <button class="btn-primary" onclick="abrirModal('modal-nuevo-alumno')">
+                <span style="font-size: 1.2rem;">+</span> Registrar Postulante Nuevo
+            </button>
+        </div>
+
+        <!-- Fila de Indicadores Analíticos Clave -->
+        <div class="kpi-grid">
+            <div class="kpi-box">
+                <div class="kpi-data">
+                    <h4>Postulantes Totales</h4>
+                    <div class="value">148</div>
+                    <div class="subtext">▲ 14% vs año previo</div>
+                </div>
+                <div class="kpi-icon-wrapper">👥</div>
+            </div>
+            <div class="kpi-box kpi-alt">
+                <div class="kpi-data">
+                    <h4>Fase Diagnóstica Activa</h4>
+                    <div class="value">32</div>
+                    <div class="subtext" style="color:var(--azul-premium)">Paso 5 del proceso</div>
+                </div>
+                <div class="kpi-icon-wrapper">📝</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-data">
+                    <h4>Derechos Reservados</h4>
+                    <div class="value">85</div>
+                    <div class="subtext">Vacantes pre-asignadas</div>
+                </div>
+                <div class="kpi-icon-wrapper">💳</div>
+            </div>
+            <div class="kpi-box kpi-alt">
+                <div class="kpi-data">
+                    <h4>Metas de Matrícula</h4>
+                    <div class="value">73%</div>
+                    <div class="subtext" style="color:var(--verde-exito)">Proyección óptima 2026</div>
+                </div>
+                <div class="kpi-icon-wrapper">📊</div>
+            </div>
+        </div>
+
+        <!-- Matriz de Gestión Completa -->
+        <div class="dashboard-card" style="padding: 0; overflow: hidden;">
+            <div class="table-header-tool" style="padding: 20px;">
+                <strong style="font-size: 1.1rem; color: var(--azul-deep);">Matrícula y Seguimiento de Expedientes</strong>
+                <input type="text" class="form-control" placeholder="Filtrar postulante..." style="width: 280px; padding: 8px 12px;">
+            </div>
+            
+            <div class="table-responsive">
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Postulante / Apoderado</th>
+                            <th>Nivel / Grado</th>
+                            <th>Fase Actual</th>
+                            <th>Progreso</th>
+                            <th style="text-align: center;">Acción Administrativa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-postulantes-tbody">
+                        <!-- Inyectado mediante script con la data estructurada -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+
+    <!-- ================================================================= -->
+    <!-- WORKSPACE: ENTORNO DEL PADRE DE FAMILIA (TRAZABILIDAD DE RUTA)    -->
+    <!-- ================================================================= -->
+    <main id="ws-padre" class="workspace">
+        <div class="dashboard-card">
+            <div class="parent-profile-segment">
+                <div>
+                    <p style="color: var(--texto-mutado); font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">Portal de Admisión Externa</p>
+                    <h2>Postulante: Mateo Benavides Castro</h2>
+                    <p style="font-size: 0.9rem; color: var(--texto-mutado); margin-top: 4px;">Código de Seguimiento Unificado: <strong style="color:var(--azul-premium)">PREM-2026-0048</strong></p>
+                </div>
+                <div>
+                    <span class="badge badge-info" style="padding: 8px 14px; font-size: 0.85rem;">Fase 5: Evaluación de Aptitudes</span>
+                </div>
+            </div>
+
+            <!-- Estructuración Exacta del Progreso -->
+            <div class="progress-block">
+                <div class="progress-meta">
+                    <span style="color: var(--azul-dark);">Progreso de Admisión: Paso 5 de 7</span>
+                    <span style="color: var(--rojo-premium);">71% de carga completada</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 20px; font-weight: 800; color: var(--azul-dark);">Camino Crítico del Postulante</h3>
+
+        <div class="timeline-container">
+            <!-- Iteración Visual Estricta de las Etapas Solicitadas -->
+            <div class="step-node done">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>1. Registro de Datos (Entrega de Credenciales)</h5>
+                        <p>Ficha biográfica cargada en el servidor central. Accesos enviados al apoderado vía SMS.</p>
+                    </div>
+                    <span class="step-stamp">✅ Completado - 12/Ene/2026</span>
+                </div>
+            </div>
+
+            <div class="step-node done">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>2. Entrevista Institucional</h5>
+                        <p>Evaluación conductual y entrevista de expectativas socioemocionales completada.</p>
+                    </div>
+                    <span class="step-stamp">✅ Completado - 15/Ene/2026</span>
+                </div>
+            </div>
+
+            <div class="step-node done">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>3. Pago de Derechos: Vacante</h5>
+                        <p>Procesamiento de carpeta y reserva de espacio físico validado en caja central.</p>
+                    </div>
+                    <span class="step-stamp">✅ Completado - 18/Ene/2026</span>
+                </div>
+            </div>
+
+            <div class="step-node done">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>4. Validación de Expediente y Requisitos</h5>
+                        <p>Revisión analítica de documentación legal, fotos y constancias de no-adeudo.</p>
+                    </div>
+                    <span class="step-stamp">✅ Completado - 20/Ene/2026</span>
+                </div>
+            </div>
+
+            <div class="step-node current">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>5. Examen Diagnóstico (Etapa Actual)</h5>
+                        <p style="color:var(--rojo-premium); font-weight: 700;">📅 Programado: Sábado 07 de Febrero, 2026 - 08:30 AM</p>
+                        <p>Ubicación: Sede Central Premium College - Pabellón de Ciencias, Aula 102.</p>
+                    </div>
+                    <button class="btn-primary" style="padding: 8px 14px; font-size: 0.8rem;" onclick="alert('Simulación: Descargando temario base...');">Descargar Guía de Estudio</button>
+                </div>
+            </div>
+
+            <div class="step-node upcoming">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>6. Entrega de Resultados</h5>
+                        <p>Procesamiento de respuestas por la comisión y asignación formal de vacantes directas.</p>
+                    </div>
+                    <span class="step-stamp">🔒 Previsto: 11/Feb/2026</span>
+                </div>
+            </div>
+
+            <div class="step-node upcoming">
+                <div class="step-indicator"></div>
+                <div class="step-body">
+                    <div class="step-info">
+                        <h5>7. Matrícula</h5>
+                        <p>Carga final del estudiante al padrón general del Ministerio de Educación, firma de contratos financieros y alta académica.</p>
+                    </div>
+                    <span class="step-stamp">🔒 Previsto: 12 al 15/Feb/2026</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ================================================================= -->
+    <!-- MODAL A: REGISTRAR ALUMNO NUEVO (CAMPOS EN BLANCO SIMULADOS)     -->
+    <!-- ================================================================= -->
+    <div id="modal-nuevo-alumno" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Apertura de Expediente de Admisión</h3>
+                <button class="btn-close-modal" onclick="cerrarModal('modal-nuevo-alumno')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4 style="color: var(--azul-premium); font-size: 0.9rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase;">Datos Generales del Postulante</h4>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Nombres Completos</label>
+                        <input type="text" class="form-control" placeholder="Ej: Juan Carlos">
+                    </div>
+                    <div class="form-group">
+                        <label>Apellidos Paterno y Materno</label>
+                        <input type="text" class="form-control" placeholder="Ej: Mendoza Ramos">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Nivel Académico</label>
+                        <select class="form-control">
+                            <option value="">Seleccione...</option>
+                            <option>Inicial</option>
+                            <option>Primaria</option>
+                            <option>Secundaria</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Grado de Ingreso</label>
+                        <input type="text" class="form-control" placeholder="Ej: 1° Año">
+                    </div>
+                </div>
+
+                <h4 style="color: var(--azul-premium); font-size: 0.9rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase;">Información de Contacto (Apoderado)</h4>
+                <div class="form-group">
+                    <div class="form-group">
+                        <label>Nombre del Padre, Madre o Tutor Legal</label>
+                        <input type="text" class="form-control" placeholder="Nombre completo del tutor">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Teléfono Celular</label>
+                        <input type="text" class="form-control" placeholder="Ej: 931000000">
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" class="form-control" placeholder="Ej: tutor@gmail.com">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-table" onclick="cerrarModal('modal-nuevo-alumno')">Cancelar</button>
+                <button class="btn-primary" style="background: var(--rojo-premium);" onclick="procesarGuardadoSimulado()">Guardar Expediente</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- MODAL B: GESTIONAR POSTULANTE (DATA DINÁMICA DE SEGUIMIENTO)     -->
+    <!-- ================================================================= -->
+    <div id="modal-gestionar" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Ficha Analítica e Historial de Progreso</h3>
+                <button class="btn-close-modal" onclick="cerrarModal('modal-gestionar')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-gestionar-body">
+                <!-- Se inyecta dinámicamente según el estudiante clicado -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="cerrarModal('modal-gestionar')">Aceptar y Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- CONTROL LÓGICO DE LA DEMOSTRACIÓN (ENGINE SIMULADO)               -->
+    <!-- ================================================================= -->
+    <script>
+        // DATA MAESTRA SIMULADA DE ALUMNOS (ESTADOS TOTALMENTE CONFIGURADOS)
+        const DATA_POSTULANTES = [
+            { id: "PREM-0048", nombre: "Mateo Benavides Castro", apoderado: "Carlos Benavides (Padre)", nivel: "Secundaria", grado: "1° Año", fase: "5. Examen Diagnóstico", pct: "71%", colorBadge: "badge-warning", det: "Examen de ingreso programado para el 07 de febrero en el aula 102." },
+            { id: "PREM-0012", nombre: "Luciana Salazar Peralta", apoderado: "María Peralta (Madre)", nivel: "Primaria", grado: "5° Grado", fase: "7. Matrícula Finalizada", pct: "100%", colorBadge: "badge-success", det: "El expediente cuenta con todas las firmas legales y el alta en el padrón." },
+            { id: "PREM-0095", nombre: "Thiago Rojas Guerrero", apoderado: "Juan Rojas (Padre)", nivel: "Inicial", grado: "4 Años", fase: "2. Entrevista Familiar", pct: "28%", colorBadge: "badge-info", det: "Entrevista psicológica agendada para la siguiente semana con Dirección." }
+        ];
+
+        // RENDERIZADO INICIAL DE LA TABLA DEL DIRECTOR
+        function cargarTablaPostulantes() {
+            const tbody = document.getElementById('tabla-postulantes-tbody');
+            tbody.innerHTML = "";
+            
+            DATA_POSTULANTES.forEach((alumno, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight:700; color: var(--azul-dark);">${alumno.id}</td>
+                        <td>
+                            <strong>${alumno.nombre}</strong>
+                            <div style="font-size: 0.75rem; color: var(--texto-mutado);">${alumno.apoderado}</div>
+                        </td>
+                        <td>${alumno.nivel}<div style="font-size: 0.75rem; color: var(--texto-mutado);">${alumno.grado}</div></td>
+                        <td><span class="badge ${alumno.colorBadge}">${alumno.fase}</span></td>
+                        <td>
+                            <strong style="color: var(--rojo-premium); font-size:0.95rem;">${alumno.pct}</strong>
+                        </td>
+                        <td style="text-align: center;">
+                            <button class="btn-table" onclick="verDetalleEstudiante(${index})">Gestionar Alumno</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // EVALUACIÓN DE CREDENCIALES EXIGIDAS
+        function evaluarLogin() {
+            const u = document.getElementById('txt-user').value;
+            const p = document.getElementById('txt-pass').value;
+            const err = document.getElementById('login-msg-error');
+
+            if (u === "admin" && p === "admin") {
+                document.getElementById('login-screen').style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById('login-screen').style.display = "none";
+                    document.getElementById('main-system-header').style.display = "flex";
+                    cargarTablaPostulantes();
+                }, 300);
+            } else {
+                err.style.display = "block";
+            }
+        }
+
+        // LOGOUT INTEGRADO
+        function cerrarSesionSga() {
+            document.getElementById('login-screen').style.display = "flex";
+            document.getElementById('login-screen').style.opacity = "1";
+            document.getElementById('main-system-header').style.display = "none";
+            document.getElementById('ws-director').classList.remove('active-workspace');
+            document.getElementById('ws-padre').classList.remove('active-workspace');
+        }
+
+        // CONTROL NAV DE ENTORNOS (DIRECTOR VS PADRE)
+        function cambiarEntorno(rol) {
+            document.getElementById('ws-director').classList.remove('active-workspace');
+            document.getElementById('ws-padre').classList.remove('active-workspace');
+            document.getElementById('toggle-admin').classList.remove('active');
+            document.getElementById('toggle-padre').classList.remove('active');
+
+            if (rol === 'director') {
+                document.getElementById('ws-director').classList.add('active-workspace');
+                document.getElementById('toggle-admin').classList.add('active');
+            } else {
+                document.getElementById('ws-padre').classList.add('active-workspace');
+                document.getElementById('toggle-padre').classList.add('active');
+            }
+        }
+
+        // MODALES CONTROLLERS
+        function abrirModal(id) {
+            document.getElementById(id).style.display = "flex";
+        }
+
+        function cerrarModal(id) {
+            document.getElementById(id).style.display = "none";
+        }
+
+        // ACCIÓN INTERACTIVA AL GESTIONAR UN ALUMNO (DATA COMPLETA EN MODAL)
+        function verDetalleEstudiante(index) {
+            const al = DATA_POSTULANTES[index];
+            const body = document.getElementById('modal-gestionar-body');
+            
+            body.innerHTML = `
+                <div class="modal-profile-box">
+                    <div class="modal-row"><span>Código de Registro:</span> <span>${al.id}</span></div>
+                    <div class="modal-row"><span>Postulante:</span> <span>${al.nombre}</span></div>
+                    <div class="modal-row"><span>Apoderado Legal:</span> <span>${al.apoderado}</span></div>
+                    <div class="modal-row"><span>Nivel/Grado Solicitado:</span> <span>${al.nivel} - ${al.grado}</span></div>
+                </div>
+                <h4 style="font-size:0.9rem; color: var(--azul-dark); font-weight:700; margin-bottom:10px;">Estado de Carga y Avance</h4>
+                <div style="background: #e2e8f0; height: 10px; border-radius: 10px; overflow:hidden; margin-bottom:12px;">
+                    <div style="background: var(--rojo-premium); width: ${al.pct}; height: 100%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:20px;">
+                    <span>Fase Operativa: <strong>${al.fase}</strong></span>
+                    <span style="color:var(--rojo-premium); font-weight:bold;">${al.pct} Alcanzado</span>
+                </div>
+                <p style="font-size:0.9rem; background: #fffbeb; padding: 12px; border-left: 4px solid #f59e0b; border-radius:4px; color:#78350f;">
+                    <strong>Bitácora Interna:</strong> ${al.det}
+                </p>
+            `;
+            abrirModal('modal-gestionar');
+        }
+
+        // SIMULACIÓN DE GUARDADO EXITOSO
+        function procesarGuardadoSimulado() {
+            cerrarModal('modal-nuevo-alumno');
+            alert("Simulación de Sistema: Expediente registrado exitosamente en memoria caché temporal. No se requiere servidor de base de datos para este prototipo.");
+        }
+    </script>
+
+</body>
+</html>
